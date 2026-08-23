@@ -115,10 +115,10 @@ let state = cloneData(DEFAULT_STATE);
 
 // Transient (non-persisted) UI state.
 // ui.activeSection remains the single source of truth for the
-// current main section ("currentMainSection"). isAnimating and
-// isDragging were added to support the unified navigation
-// architecture (swipe / keyboard / history) without introducing
-// a second, competing state model.
+// current main section ("currentMainSection"). sidebarOpen,
+// isAnimating and isDragging were added to support the unified
+// navigation architecture (swipe / keyboard / history / drawer)
+// without introducing a second, competing state model.
 const ui = {
   activeSection: "dashboard",
   currentCourseId: null,
@@ -135,6 +135,7 @@ const ui = {
   quizIndex: 0,
   quizScore: 0,
   quizAnswers: {},
+  sidebarOpen: false,
   isAnimating: false,
   isDragging: false,
 };
@@ -150,7 +151,7 @@ const dom = {};
 
 function cacheDom() {
   const ids = [
-    "themeToggle", "primaryNav", "mainContent",
+    "themeToggle", "mobileNavToggle", "primaryNav", "mainContent",
     "globalSearch", "globalSearchForm", "globalSearchInput", "globalSearchButton",
     "searchResults", "searchResultsStatus", "searchResultsList", "searchEmptyState",
 
@@ -1292,14 +1293,10 @@ function ensureAddButton(container, label, onClick, marker) {
       text: label,
       attrs: { type: "button" },
       dataset: { addMarker: marker },
+      onClick,
     });
     container.parentElement.insertBefore(btn, container);
   }
-  // Always rebind the handler (even on a reused button) so it closes over
-  // the CURRENT course rather than whichever course first created the
-  // button. Assigning .onclick (instead of addEventListener) guarantees
-  // the previous handler is replaced rather than stacked.
-  btn.onclick = onClick;
   return btn;
 }
 
@@ -1638,10 +1635,7 @@ function openEditNoteModal(note) {
     onSubmit: (values) => {
       note.title = values.title;
       note.course = values.course || "";
-      // Use the submitted value directly (not `values.date || note.date`):
-      // that fallback made it impossible to clear a date, since an
-      // intentionally-emptied field ("") is just as falsy as an unset one.
-      note.date = values.date;
+      note.date = values.date || note.date;
       note.tags = (values.tags || "").split(",").map((t) => t.trim()).filter(Boolean);
       note.body = values.body || "";
       saveState();
@@ -2616,6 +2610,7 @@ function initializeNavigation() {
         event.preventDefault();
         navigateTo(target);
         setActiveNavLink(target);
+        closeMobileNavIfOpen();
       });
     });
   }
@@ -2679,6 +2674,29 @@ function setActiveNavLink(target) {
   });
 }
 
+/* ---- Mobile nav drawer ("sidebar") ---- */
+function closeMobileNavIfOpen() {
+  if (!dom.mobileNavToggle || !dom.primaryNav) return;
+  if (!ui.sidebarOpen) return;
+  ui.sidebarOpen = false;
+  dom.mobileNavToggle.setAttribute("aria-expanded", "false");
+  dom.primaryNav.classList.remove("is-open");
+}
+
+function toggleMobileNav() {
+  if (!dom.mobileNavToggle || !dom.primaryNav) return;
+  ui.sidebarOpen = !ui.sidebarOpen;
+  dom.primaryNav.classList.toggle("is-open", ui.sidebarOpen);
+  dom.mobileNavToggle.setAttribute("aria-expanded", String(ui.sidebarOpen));
+
+  if (ui.sidebarOpen) {
+    const firstLink = qs(".primary-nav__link", dom.primaryNav);
+    if (firstLink) firstLink.focus();
+  } else {
+    dom.mobileNavToggle.focus();
+  }
+}
+
 /* ---- Main-section stepping helpers (shared by swipe / keyboard) ---- */
 function getMainSectionIndex(sectionId) {
   const index = TOGGLEABLE_SECTIONS.indexOf(sectionId);
@@ -2719,6 +2737,11 @@ function isKeyboardNavigationExempt(target) {
 function initializeKeyboardNavigation() {
   document.addEventListener("keydown", (event) => {
     if (isKeyboardNavigationExempt(event.target)) return;
+
+    if (event.key === "Escape") {
+      if (!activeModalCleanup) closeMobileNavIfOpen();
+      return;
+    }
 
     // Do not change the main section behind an open modal.
     if (activeModalCleanup) return;
@@ -2814,7 +2837,7 @@ function isSwipeExemptTarget(target) {
   if (!target || !target.closest) return false;
   return Boolean(
     target.closest(
-      "button, a, input, textarea, select, label, [contenteditable], [role='button'], .gpa-table-section, .study-tools__tabs ul"
+      "button, a, input, textarea, select, label, [contenteditable], [role='button'], .gpa-table-section"
     )
   );
 }
@@ -3104,6 +3127,7 @@ function renderSettings() {
    ========================================================= */
 function initializeEventListeners() {
   if (dom.themeToggle) dom.themeToggle.addEventListener("click", toggleTheme);
+  if (dom.mobileNavToggle) dom.mobileNavToggle.addEventListener("click", toggleMobileNav);
 
   // Tasks
   if (dom.taskList) {
