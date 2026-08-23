@@ -1214,6 +1214,10 @@ label {
   line-height: 1;
 }
 
+.icon-button--nav-toggle {
+  display: none;
+}
+
 /* Focus visibility (shared) */
 a:focus-visible,
 button:focus-visible,
@@ -1973,11 +1977,6 @@ textarea:focus-visible,
 
 .gpa-table-section {
   overflow-x: auto;
-  /* #mainContent sets touch-action: pan-y for swipe navigation between
-     sections; override it here so touches that start on this table can
-     still pan horizontally natively. JS also exempts this element from
-     starting a swipe (see isSwipeExemptTarget), so the two never fight. */
-  touch-action: pan-x pan-y;
 }
 
 .gpa-table {
@@ -2095,9 +2094,6 @@ textarea:focus-visible,
   display: flex;
   gap: var(--space-1);
   overflow-x: auto;
-  /* See .gpa-table-section: override #mainContent's touch-action: pan-y
-     so this strip can still be panned horizontally natively on touch. */
-  touch-action: pan-x pan-y;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--space-5);
   scrollbar-width: none;
