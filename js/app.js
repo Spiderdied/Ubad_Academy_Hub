@@ -18,7 +18,7 @@
    16. Academic Analytics
    17. Study Tools (Flashcards + Quizzes)
    18. Global Search
-   19. Navigation
+   19. Navigation (main-section swipe / keyboard / history + mobile drawer)
    20. Settings
    21. Event Listeners
    22. Initialization
@@ -114,6 +114,11 @@ const DEFAULT_STATE = {
 let state = cloneData(DEFAULT_STATE);
 
 // Transient (non-persisted) UI state.
+// ui.activeSection remains the single source of truth for the
+// current main section ("currentMainSection"). isAnimating and
+// isDragging were added to support the unified navigation
+// architecture (swipe / keyboard / history) without introducing
+// a second, competing state model.
 const ui = {
   activeSection: "dashboard",
   currentCourseId: null,
@@ -130,6 +135,8 @@ const ui = {
   quizIndex: 0,
   quizScore: 0,
   quizAnswers: {},
+  isAnimating: false,
+  isDragging: false,
 };
 
 function cloneData(source) {
@@ -143,7 +150,7 @@ const dom = {};
 
 function cacheDom() {
   const ids = [
-    "themeToggle", "mobileNavToggle", "primaryNav",
+    "themeToggle", "primaryNav", "mainContent",
     "globalSearch", "globalSearchForm", "globalSearchInput", "globalSearchButton",
     "searchResults", "searchResultsStatus", "searchResultsList", "searchEmptyState",
 
@@ -1285,10 +1292,14 @@ function ensureAddButton(container, label, onClick, marker) {
       text: label,
       attrs: { type: "button" },
       dataset: { addMarker: marker },
-      onClick,
     });
     container.parentElement.insertBefore(btn, container);
   }
+  // Always rebind the handler (even on a reused button) so it closes over
+  // the CURRENT course rather than whichever course first created the
+  // button. Assigning .onclick (instead of addEventListener) guarantees
+  // the previous handler is replaced rather than stacked.
+  btn.onclick = onClick;
   return btn;
 }
 
@@ -1627,7 +1638,10 @@ function openEditNoteModal(note) {
     onSubmit: (values) => {
       note.title = values.title;
       note.course = values.course || "";
-      note.date = values.date || note.date;
+      // Use the submitted value directly (not `values.date || note.date`):
+      // that fallback made it impossible to clear a date, since an
+      // intentionally-emptied field ("") is just as falsy as an unset one.
+      note.date = values.date;
       note.tags = (values.tags || "").split(",").map((t) => t.trim()).filter(Boolean);
       note.body = values.body || "";
       saveState();
@@ -2582,54 +2596,70 @@ function buildSearchResults(query) {
 
 /* =========================================================
    19. NAVIGATION
+   Unified main-section navigation (nav links + swipe + keyboard
+   + browser history) plus the mobile nav drawer ("sidebar").
    ========================================================= */
+
 // Sections that exist as independent top-level views (toggled via [hidden]).
+// This is also the ordered list used for swipe / keyboard / history navigation.
 const TOGGLEABLE_SECTIONS = ["dashboard", "courses", "notes", "calendar", "grades", "analytics", "studyTools", "settings"];
 
 // Sections that live inside the dashboard as anchors (scrolled into view).
 const DASHBOARD_ANCHORS = ["schedule", "tasks", "study"];
 
 function initializeNavigation() {
-  if (!dom.primaryNav) return;
-
-  qsa(".primary-nav__link", dom.primaryNav).forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const target = link.dataset.nav;
-      if (!target) return;
-      event.preventDefault();
-      navigateTo(target);
-      setActiveNavLink(target);
-      closeMobileNavIfOpen();
+  if (dom.primaryNav) {
+    qsa(".primary-nav__link", dom.primaryNav).forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const target = link.dataset.nav;
+        if (!target) return;
+        event.preventDefault();
+        navigateTo(target);
+        setActiveNavLink(target);
+      });
     });
-  });
+  }
+
+  initializeSwipeNavigation();
+  initializeKeyboardNavigation();
+  initializeHistoryNavigation();
+  initializeResizeHandling();
 }
 
-function navigateTo(target) {
+function navigateTo(target, options = {}) {
   if (DASHBOARD_ANCHORS.includes(target)) {
-    showSection("dashboard");
+    showSection("dashboard", options);
     scrollToAnchor(target);
     setActiveNavLink(target);
     return;
   }
 
   if (TOGGLEABLE_SECTIONS.includes(target)) {
-    showSection(target);
+    showSection(target, options);
     setActiveNavLink(target);
     return;
   }
 
   // Unknown/unimplemented section (e.g. "aiAssistant"): fall back gracefully.
-  showSection("dashboard");
+  showSection("dashboard", options);
   setActiveNavLink("dashboard");
 }
 
-function showSection(sectionId) {
+function showSection(sectionId, options = {}) {
+  if (!TOGGLEABLE_SECTIONS.includes(sectionId)) return;
+  const { pushHistory = true } = options;
+  const isChanging = ui.activeSection !== sectionId;
+
   TOGGLEABLE_SECTIONS.forEach((id) => {
     const section = dom[id];
     if (!section) return;
     section.hidden = id !== sectionId;
   });
   ui.activeSection = sectionId;
+
+  if (isChanging && pushHistory) {
+    updateHistoryForSection(sectionId);
+  }
 }
 
 function scrollToAnchor(anchorId) {
@@ -2649,16 +2679,362 @@ function setActiveNavLink(target) {
   });
 }
 
-function closeMobileNavIfOpen() {
-  if (!dom.mobileNavToggle || !dom.primaryNav) return;
-  dom.mobileNavToggle.setAttribute("aria-expanded", "false");
-  dom.primaryNav.classList.remove("is-open");
+/* ---- Main-section stepping helpers (shared by swipe / keyboard) ---- */
+function getMainSectionIndex(sectionId) {
+  const index = TOGGLEABLE_SECTIONS.indexOf(sectionId);
+  return index === -1 ? 0 : index;
 }
 
-function toggleMobileNav() {
-  if (!dom.mobileNavToggle || !dom.primaryNav) return;
-  const isOpen = dom.primaryNav.classList.toggle("is-open");
-  dom.mobileNavToggle.setAttribute("aria-expanded", String(isOpen));
+function goToMainSectionByIndex(index, options = {}) {
+  const clamped = Math.max(0, Math.min(TOGGLEABLE_SECTIONS.length - 1, index));
+  const targetId = TOGGLEABLE_SECTIONS[clamped];
+  if (targetId === ui.activeSection) return false;
+  navigateTo(targetId, options);
+  return true;
+}
+
+function goToNextMainSection(options) {
+  const currentIndex = getMainSectionIndex(ui.activeSection);
+  if (currentIndex >= TOGGLEABLE_SECTIONS.length - 1) return false;
+  return goToMainSectionByIndex(currentIndex + 1, options);
+}
+
+function goToPreviousMainSection(options) {
+  const currentIndex = getMainSectionIndex(ui.activeSection);
+  if (currentIndex <= 0) return false;
+  return goToMainSectionByIndex(currentIndex - 1, options);
+}
+
+/* ---- Keyboard navigation ---- */
+function isKeyboardNavigationExempt(target) {
+  if (!target) return false;
+  const tagName = target.tagName ? target.tagName.toLowerCase() : "";
+  // Includes input[type=radio/checkbox] so the existing quiz answer
+  // radio group keeps its native Arrow-key roving behavior.
+  if (tagName === "input" || tagName === "textarea" || tagName === "select") return true;
+  if (target.isContentEditable) return true;
+  return false;
+}
+
+function initializeKeyboardNavigation() {
+  document.addEventListener("keydown", (event) => {
+    if (isKeyboardNavigationExempt(event.target)) return;
+
+    // Do not change the main section behind an open modal.
+    if (activeModalCleanup) return;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        if (goToPreviousMainSection()) event.preventDefault();
+        break;
+      case "ArrowRight":
+        if (goToNextMainSection()) event.preventDefault();
+        break;
+      case "Home":
+        if (goToMainSectionByIndex(0)) event.preventDefault();
+        break;
+      case "End":
+        if (goToMainSectionByIndex(TOGGLEABLE_SECTIONS.length - 1)) event.preventDefault();
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+/* ---- Browser history integration ---- */
+function updateHistoryForSection(sectionId, { replace = false } = {}) {
+  if (!window.history || typeof window.history.pushState !== "function") return;
+  const url = `#${sectionId}`;
+  const historyState = { ubadSection: sectionId };
+  try {
+    if (replace) {
+      window.history.replaceState(historyState, "", url);
+    } else {
+      window.history.pushState(historyState, "", url);
+    }
+  } catch (error) {
+    // History API may be restricted in some embedded/sandboxed contexts;
+    // section navigation itself still works without URL/back-button sync.
+  }
+}
+
+function sectionFromHash(hash) {
+  const id = (hash || "").replace(/^#\/?/, "");
+  return TOGGLEABLE_SECTIONS.includes(id) ? id : null;
+}
+
+function handlePopState(event) {
+  const sectionId =
+    (event.state && TOGGLEABLE_SECTIONS.includes(event.state.ubadSection) && event.state.ubadSection) ||
+    sectionFromHash(window.location.hash) ||
+    "dashboard";
+  navigateTo(sectionId, { pushHistory: false });
+}
+
+function initializeHistoryNavigation() {
+  if (!window.history || typeof window.history.replaceState !== "function") return;
+  window.addEventListener("popstate", handlePopState);
+}
+
+/* ---- Swipe / drag navigation for main sections ----
+   Only the currently visible section can be given drag feedback: the
+   HTML toggles sections via [hidden] rather than laying them out on a
+   horizontal track, so a hidden neighbor has no position to "follow"
+   the pointer with. See the missing-hooks note in the change report
+   for the CSS/HTML addition that would enable full two-panel dragging. */
+const SWIPE_MIN_DISTANCE = 12; // px of movement before axis intent is decided
+const SWIPE_COMPLETE_RATIO = 0.22; // fraction of container width to trigger navigation
+const SWIPE_COMPLETE_MIN_PX = 64;
+const SWIPE_TRANSITION_MS = 220;
+
+const swipeState = {
+  pointerId: null,
+  startX: 0,
+  startY: 0,
+  lastX: 0,
+  axis: null, // "horizontal" | "vertical" | null (undetermined)
+  containerWidth: 0,
+  rafId: null,
+  pendingX: null,
+};
+
+function prefersReducedMotion() {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function getActiveSectionEl() {
+  return dom[ui.activeSection] || null;
+}
+
+function isSwipeExemptTarget(target) {
+  if (!target || !target.closest) return false;
+  return Boolean(
+    target.closest(
+      "button, a, input, textarea, select, label, [contenteditable], [role='button'], .gpa-table-section, .study-tools__tabs ul"
+    )
+  );
+}
+
+function initializeSwipeNavigation() {
+  const container = dom.mainContent;
+  if (!container || typeof window.PointerEvent === "undefined") return;
+
+  // Allow native vertical scrolling; horizontal intent is detected in JS.
+  container.style.touchAction = "pan-y";
+
+  container.addEventListener("pointerdown", onSwipePointerDown, { passive: true });
+  container.addEventListener("pointermove", onSwipePointerMove, { passive: false });
+  container.addEventListener("pointerup", onSwipePointerEnd, { passive: true });
+  container.addEventListener("pointercancel", onSwipePointerEnd, { passive: true });
+}
+
+function onSwipePointerDown(event) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  if (ui.isAnimating || activeModalCleanup) return;
+  if (isSwipeExemptTarget(event.target)) return;
+
+  swipeState.pointerId = event.pointerId;
+  swipeState.startX = event.clientX;
+  swipeState.startY = event.clientY;
+  swipeState.lastX = event.clientX;
+  swipeState.axis = null;
+  swipeState.containerWidth = dom.mainContent.clientWidth || window.innerWidth;
+  ui.isDragging = true;
+}
+
+function onSwipePointerMove(event) {
+  if (swipeState.pointerId === null || event.pointerId !== swipeState.pointerId) return;
+
+  const deltaX = event.clientX - swipeState.startX;
+  const deltaY = event.clientY - swipeState.startY;
+
+  if (swipeState.axis === null) {
+    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE && Math.abs(deltaY) < SWIPE_MIN_DISTANCE) {
+      return;
+    }
+    swipeState.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "horizontal" : "vertical";
+    if (swipeState.axis === "vertical") {
+      // Vertical scrolling wins; stop tracking so we never fight the browser.
+      resetSwipeState();
+      return;
+    }
+  }
+
+  if (swipeState.axis !== "horizontal") return;
+
+  event.preventDefault();
+  swipeState.lastX = event.clientX;
+  scheduleSwipeFrame(deltaX);
+}
+
+function scheduleSwipeFrame(deltaX) {
+  swipeState.pendingX = deltaX;
+  if (swipeState.rafId !== null) return;
+  swipeState.rafId = requestAnimationFrame(() => {
+    swipeState.rafId = null;
+    applySwipeVisualFeedback(swipeState.pendingX);
+  });
+}
+
+function applySwipeVisualFeedback(deltaX) {
+  const sectionEl = getActiveSectionEl();
+  if (!sectionEl) return;
+
+  const currentIndex = getMainSectionIndex(ui.activeSection);
+  const atFirst = currentIndex === 0;
+  const atLast = currentIndex === TOGGLEABLE_SECTIONS.length - 1;
+
+  let translateX = deltaX;
+  if ((deltaX > 0 && atFirst) || (deltaX < 0 && atLast)) {
+    translateX = deltaX * 0.35; // subtle resistance at the first/last section
+  }
+
+  sectionEl.style.transition = "none";
+  sectionEl.style.willChange = "transform";
+  sectionEl.style.transform = `translateX(${translateX}px)`;
+}
+
+function onSwipePointerEnd(event) {
+  if (swipeState.pointerId === null || event.pointerId !== swipeState.pointerId) return;
+
+  const deltaX = swipeState.lastX - swipeState.startX;
+  const axis = swipeState.axis;
+  const containerWidth = swipeState.containerWidth || window.innerWidth;
+
+  resetSwipeState();
+
+  if (axis !== "horizontal") return;
+
+  const threshold = Math.max(SWIPE_COMPLETE_MIN_PX, containerWidth * SWIPE_COMPLETE_RATIO);
+  const currentIndex = getMainSectionIndex(ui.activeSection);
+  const atFirst = currentIndex === 0;
+  const atLast = currentIndex === TOGGLEABLE_SECTIONS.length - 1;
+
+  if (deltaX <= -threshold && !atLast) {
+    completeSwipeNavigation("next");
+  } else if (deltaX >= threshold && !atFirst) {
+    completeSwipeNavigation("previous");
+  } else {
+    snapSwipeBack();
+  }
+}
+
+function resetSwipeState() {
+  swipeState.pointerId = null;
+  swipeState.axis = null;
+  swipeState.pendingX = null;
+  if (swipeState.rafId !== null) {
+    cancelAnimationFrame(swipeState.rafId);
+    swipeState.rafId = null;
+  }
+  ui.isDragging = false;
+}
+
+function snapSwipeBack() {
+  const sectionEl = getActiveSectionEl();
+  if (!sectionEl) return;
+  const reduceMotion = prefersReducedMotion();
+  sectionEl.style.transition = reduceMotion ? "none" : `transform ${SWIPE_TRANSITION_MS}ms ease`;
+  sectionEl.style.transform = "translateX(0)";
+
+  const clearInlineStyles = () => {
+    sectionEl.style.transition = "";
+    sectionEl.style.transform = "";
+    sectionEl.style.willChange = "";
+    sectionEl.removeEventListener("transitionend", clearInlineStyles);
+  };
+
+  if (reduceMotion) {
+    clearInlineStyles();
+  } else {
+    sectionEl.addEventListener("transitionend", clearInlineStyles);
+  }
+}
+
+function completeSwipeNavigation(direction) {
+  const sectionEl = getActiveSectionEl();
+  if (!sectionEl || !dom.mainContent) return;
+
+  ui.isAnimating = true;
+  const reduceMotion = prefersReducedMotion();
+  const containerWidth = dom.mainContent.clientWidth || window.innerWidth;
+  const exitX = direction === "next" ? -containerWidth : containerWidth;
+
+  const finishNavigation = () => {
+    sectionEl.style.transition = "";
+    sectionEl.style.transform = "";
+    sectionEl.style.willChange = "";
+    sectionEl.removeEventListener("transitionend", finishNavigation);
+
+    if (direction === "next") goToNextMainSection();
+    else goToPreviousMainSection();
+
+    const newSectionEl = getActiveSectionEl();
+    if (!newSectionEl) {
+      ui.isAnimating = false;
+      return;
+    }
+
+    const entryX = direction === "next" ? containerWidth : -containerWidth;
+    newSectionEl.style.transition = "none";
+    newSectionEl.style.transform = `translateX(${entryX}px)`;
+    // Force a reflow so the browser registers the starting position
+    // before the transition below is applied.
+    void newSectionEl.offsetWidth;
+    newSectionEl.style.transition = reduceMotion ? "none" : `transform ${SWIPE_TRANSITION_MS}ms ease`;
+    newSectionEl.style.transform = "translateX(0)";
+
+    const clearEntryStyles = () => {
+      newSectionEl.style.transition = "";
+      newSectionEl.style.transform = "";
+      newSectionEl.style.willChange = "";
+      newSectionEl.removeEventListener("transitionend", clearEntryStyles);
+      ui.isAnimating = false;
+    };
+
+    if (reduceMotion) {
+      clearEntryStyles();
+    } else {
+      newSectionEl.addEventListener("transitionend", clearEntryStyles);
+    }
+  };
+
+  if (reduceMotion) {
+    finishNavigation();
+    return;
+  }
+
+  sectionEl.style.transition = `transform ${SWIPE_TRANSITION_MS}ms ease`;
+  sectionEl.style.transform = `translateX(${exitX}px)`;
+  sectionEl.addEventListener("transitionend", finishNavigation);
+}
+
+/* ---- Resize / orientation handling ---- */
+function initializeResizeHandling() {
+  let resizeTimer = null;
+  const handleResize = () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (dom.mainContent) {
+        swipeState.containerWidth = dom.mainContent.clientWidth || window.innerWidth;
+      }
+      // If a drag/animation was interrupted by the resize, clear any
+      // leftover inline transform so the layout doesn't get stuck.
+      if (!ui.isDragging && !ui.isAnimating) {
+        const sectionEl = getActiveSectionEl();
+        if (sectionEl) {
+          sectionEl.style.transform = "";
+          sectionEl.style.transition = "";
+        }
+      }
+    }, 150);
+  };
+  window.addEventListener("resize", handleResize);
+  window.addEventListener("orientationchange", handleResize);
 }
 
 /* =========================================================
@@ -2728,7 +3104,6 @@ function renderSettings() {
    ========================================================= */
 function initializeEventListeners() {
   if (dom.themeToggle) dom.themeToggle.addEventListener("click", toggleTheme);
-  if (dom.mobileNavToggle) dom.mobileNavToggle.addEventListener("click", toggleMobileNav);
 
   // Tasks
   if (dom.taskList) {
@@ -2859,9 +3234,13 @@ function init() {
   initializeEventListeners();
   renderAll();
 
-  // Ensure dashboard is the visible section on first load.
-  showSection("dashboard");
-  setActiveNavLink("dashboard");
+  // Ensure the correct section is visible on first load, honoring a
+  // deep-linked hash if one is present, and sync it into history
+  // without creating an extra back-button entry.
+  const initialSection = sectionFromHash(window.location.hash) || "dashboard";
+  showSection(initialSection, { pushHistory: false });
+  setActiveNavLink(initialSection);
+  updateHistoryForSection(initialSection, { replace: true });
 }
 
 document.addEventListener("DOMContentLoaded", init);
