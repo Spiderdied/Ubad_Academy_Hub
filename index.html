@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>UBAD Academic Hub</title>
   <meta name="description" content="Personal academic management dashboard for Ubad — Year 2, English Education.">
 
-  <!-- PWA / installable app metadata (manifest + service worker to be added later) -->
-  <meta name="theme-color" content="#0f172a">
+  <!-- PWA / installable app metadata -->
+  <meta name="theme-color" content="#050816">
   <meta name="application-name" content="UBAD Academic Hub">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,19 +15,86 @@
   <meta name="apple-mobile-web-app-title" content="UBAD Hub">
   <meta name="format-detection" content="telephone=no">
 
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- Skip link for keyboard users -->
-  <a class="skip-link" href="#mainContent">Skip to main content</a>
+  <a class="skip-link" href="#mainContent" data-i18n="common.skipToContent">Skip to main content</a>
 
-  <div class="app-shell" id="appShell">
+  <!-- ============================================================
+       LAYERED 3D HUB NAVIGATION (SPATIAL ARCHITECTURE)
+       Hierarchy: hub (Layer 0) -> section (Layer 1) -> content (Layer 3)
+       ============================================================ -->
+  <div class="layer-root" id="layerRoot" data-layer-root="true">
 
+    <!-- LAYER 0: MAIN HUB -->
+    <section class="hub-layer" id="hubLayer" data-layer="hub" data-parent="none" data-sound="transition" aria-label="Main hub">
+      <!-- Atmospheric depth -->
+      <div class="hub-layer__backdrop" aria-hidden="true">
+        <span class="hub-blob hub-blob--1"></span>
+        <span class="hub-blob hub-blob--2"></span>
+        <span class="hub-blob hub-blob--3"></span>
+      </div>
+
+      <!-- Top Header -->
+      <header class="hub-layer__header">
+        <div class="hub-layer__brand">
+          <span class="hub-layer__logo" aria-hidden="true">📘</span>
+          <div class="hub-layer__titles">
+            <h1 class="hub-layer__title">UBAD ACADEMIC HUB</h1>
+            <p class="hub-layer__subtitle">Move your cursor to explore</p>
+          </div>
+        </div>
+        <div class="hub-layer__actions">
+          <button type="button" class="icon-button" aria-label="Search" id="hubSearchBtn">
+            <span class="icon-button__icon" aria-hidden="true">🔍</span>
+          </button>
+          <button type="button" class="button" aria-label="Language">
+            <span aria-hidden="true">🌐</span> EN
+          </button>
+          <div class="hub-layer__profile">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ubad&backgroundColor=8b5cf6" alt="Profile" width="36" height="36">
+          </div>
+        </div>
+      </header>
+
+      <!-- 3D Spatial Stage -->
+      <div class="hub-layer__stage" id="hubStage" role="list" aria-label="Main categories" data-layer-stage="hub">
+        <!-- Glowing Floor Pedestal -->
+        <div class="hub-pedestal" aria-hidden="true">
+          <div class="hub-pedestal__ring-1"></div>
+          <div class="hub-pedestal__ring-2"></div>
+        </div>
+        <!-- Cards populated by JS -->
+      </div>
+    </section>
+
+    <!-- LAYER 1: CATEGORY SECTIONS (Used for sub-menus if any) -->
+    <section class="section-layer" id="sectionLayer" data-layer="section" data-parent="hub" aria-label="Category sections" hidden>
+      <div class="hub-layer__backdrop" aria-hidden="true">
+        <span class="hub-blob hub-blob--1"></span>
+        <span class="hub-blob hub-blob--2"></span>
+        <span class="hub-blob hub-blob--3"></span>
+      </div>
+      <button type="button" class="layer-back" id="sectionLayerBack" data-back-target="hub" data-sound="back">
+        <span aria-hidden="true">←</span> <span>Back</span>
+      </button>
+      <h1 class="section-layer__title" id="sectionLayerTitle">Category</h1>
+      <div class="section-layer__stage" id="sectionLayerStage" role="list" aria-label="Subsections" data-layer-stage="section"></div>
+    </section>
+
+  </div>
+
+  <!-- LAYER 2: CONTENT (THE ACTUAL APPLICATION) -->
+  <div class="app-shell" id="appShell" data-layer="content" data-parent="section">
     <!-- ============ HEADER ============ -->
     <header class="app-header" id="appHeader">
+      <button type="button" class="layer-back layer-back--content" id="contentLayerBack" data-back-target="hub" data-sound="back" hidden>
+        <span aria-hidden="true">←</span> <span id="contentLayerBackLabel">Back to Hub</span>
+      </button>
+
       <div class="app-header__brand">
-        <span class="app-header__logo" aria-hidden="true">📘</span>
         <div class="app-header__titles">
           <p class="app-header__brand-name">UBAD Academic Hub</p>
           <p class="app-header__greeting" id="userGreeting">Hello, Ubad</p>
@@ -35,21 +102,21 @@
       </div>
 
       <div class="app-header__meta">
-        <span class="app-header__program" id="userProgram">Year 2 · English Education</span>
+        <span class="app-header__program" id="userProgram" data-i18n="header.program">Year 2 · English Education</span>
       </div>
 
       <!-- ---------- GLOBAL SEARCH ---------- -->
       <div class="global-search" id="globalSearch">
         <form class="global-search__form" id="globalSearchForm" role="search" autocomplete="off">
-          <label for="globalSearchInput" class="visually-hidden">Search courses, notes, tasks, schedule, calendar, study plans and grades</label>
+          <label for="globalSearchInput" class="visually-hidden" data-i18n="header.searchLabel">Search courses, notes, tasks, schedule, calendar, study plans and grades</label>
           <input
             type="search"
             id="globalSearchInput"
             name="q"
             class="global-search__input"
-            placeholder="Search everything…"
+            placeholder="Search everything…" data-i18n-placeholder="header.searchPlaceholder"
           >
-          <button type="submit" class="global-search__button" id="globalSearchButton" aria-label="Run search">
+          <button type="submit" class="global-search__button" id="globalSearchButton" aria-label="Run search" data-i18n-aria-label="header.runSearch">
             <span aria-hidden="true">🔍</span>
           </button>
         </form>
@@ -64,7 +131,7 @@
         >
           <p class="global-search__status" id="searchResultsStatus"></p>
           <ul class="global-search__list" id="searchResultsList"></ul>
-          <p class="global-search__empty" id="searchEmptyState" hidden>No results found.</p>
+          <p class="global-search__empty" id="searchEmptyState" hidden data-i18n="header.noResults">No results found.</p>
         </div>
       </div>
 
@@ -75,124 +142,41 @@
           class="icon-button"
           aria-pressed="false"
           aria-label="Toggle dark and light theme"
+          data-i18n-aria-label="header.toggleTheme"
         >
           <span class="icon-button__icon" aria-hidden="true">🌓</span>
         </button>
-
-        <button
-          type="button"
-          id="mobileNavToggle"
-          class="icon-button icon-button--nav-toggle"
-          aria-expanded="false"
-          aria-controls="primaryNav"
-          aria-label="Open navigation menu"
-        >
-          <span class="icon-button__icon" aria-hidden="true">☰</span>
-        </button>
       </div>
     </header>
-
-    <!-- ============ NAVIGATION ============ -->
-    <!-- Works as desktop sidebar and mobile bottom nav via CSS -->
-    <nav class="primary-nav" id="primaryNav" aria-label="Primary navigation">
-      <ul class="primary-nav__list">
-        <li class="primary-nav__item">
-          <a href="#dashboard" class="primary-nav__link is-active" data-nav="dashboard" aria-current="page">
-            <span class="primary-nav__icon" aria-hidden="true">🏠</span>
-            <span class="primary-nav__label">Dashboard</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#courses" class="primary-nav__link" data-nav="courses">
-            <span class="primary-nav__icon" aria-hidden="true">📚</span>
-            <span class="primary-nav__label">Courses</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#study" class="primary-nav__link" data-nav="study">
-            <span class="primary-nav__icon" aria-hidden="true">📖</span>
-            <span class="primary-nav__label">Study</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#notes" class="primary-nav__link" data-nav="notes">
-            <span class="primary-nav__icon" aria-hidden="true">📝</span>
-            <span class="primary-nav__label">Notes</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#tasks" class="primary-nav__link" data-nav="tasks">
-            <span class="primary-nav__icon" aria-hidden="true">✅</span>
-            <span class="primary-nav__label">Tasks</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#schedule" class="primary-nav__link" data-nav="schedule">
-            <span class="primary-nav__icon" aria-hidden="true">🗓️</span>
-            <span class="primary-nav__label">Schedule</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#calendar" class="primary-nav__link" data-nav="calendar">
-            <span class="primary-nav__icon" aria-hidden="true">📅</span>
-            <span class="primary-nav__label">Calendar</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#grades" class="primary-nav__link" data-nav="grades">
-            <span class="primary-nav__icon" aria-hidden="true">🎓</span>
-            <span class="primary-nav__label">Grades</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#analytics" class="primary-nav__link" data-nav="analytics">
-            <span class="primary-nav__icon" aria-hidden="true">📊</span>
-            <span class="primary-nav__label">Analytics</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#studyTools" class="primary-nav__link" data-nav="studyTools">
-            <span class="primary-nav__icon" aria-hidden="true">🧠</span>
-            <span class="primary-nav__label">Study Tools</span>
-          </a>
-        </li>
-        <li class="primary-nav__item">
-          <a href="#settings" class="primary-nav__link" data-nav="settings">
-            <span class="primary-nav__icon" aria-hidden="true">⚙️</span>
-            <span class="primary-nav__label">Settings</span>
-          </a>
-        </li>
-      </ul>
-    </nav>
 
     <!-- ============ MAIN CONTENT ============ -->
     <main class="main-content" id="mainContent">
 
       <!-- ---------- DASHBOARD / ACADEMIC OVERVIEW ---------- -->
-      <section class="dashboard" id="dashboard" aria-labelledby="dashboardHeading">
-        <h1 id="dashboardHeading" class="section-title">Dashboard</h1>
+      <section class="dashboard" id="dashboard" data-layer="content" data-target="dashboard" aria-labelledby="dashboardHeading">
+        <h1 id="dashboardHeading" class="section-title" data-i18n="nav.dashboard">Dashboard</h1>
 
         <section class="overview" id="overview" aria-labelledby="overviewHeading">
-          <h2 id="overviewHeading" class="section-subtitle">Academic Overview</h2>
+          <h2 id="overviewHeading" class="section-subtitle" data-i18n="dashboard.overview">Academic Overview</h2>
 
           <div class="stat-cards" id="statCards">
             <article class="stat-card" id="statCourses" data-stat="courses">
-              <p class="stat-card__label">Courses</p>
+              <p class="stat-card__label" data-i18n="nav.courses">Courses</p>
               <p class="stat-card__value" id="statCoursesValue">--</p>
             </article>
 
             <article class="stat-card" id="statTasks" data-stat="tasks">
-              <p class="stat-card__label">Pending Tasks</p>
+              <p class="stat-card__label" data-i18n="dashboard.pendingTasks">Pending Tasks</p>
               <p class="stat-card__value" id="statTasksValue">--</p>
             </article>
 
             <article class="stat-card" id="statExams" data-stat="exams">
-              <p class="stat-card__label">Upcoming Exams</p>
+              <p class="stat-card__label" data-i18n="dashboard.upcomingExams">Upcoming Exams</p>
               <p class="stat-card__value" id="statExamsValue">--</p>
             </article>
 
             <article class="stat-card" id="statGpa" data-stat="gpa">
-              <p class="stat-card__label">GPA</p>
+              <p class="stat-card__label" data-i18n="dashboard.gpa">GPA</p>
               <p class="stat-card__value" id="statGpaValue">--</p>
             </article>
           </div>
@@ -200,93 +184,76 @@
 
         <!-- ---------- TODAY'S SCHEDULE ---------- -->
         <section class="schedule-preview" id="schedule" aria-labelledby="scheduleHeading">
-          <h2 id="scheduleHeading" class="section-subtitle">Today's Schedule</h2>
+          <h2 id="scheduleHeading" class="section-subtitle" data-i18n="dashboard.todaySchedule">Today's Schedule</h2>
 
           <ul class="schedule-list" id="scheduleList" aria-live="polite">
-            <li class="schedule-list__empty" id="scheduleEmptyState">
+            <li class="schedule-list__empty" id="scheduleEmptyState" data-i18n="dashboard.noSchedule">
               No schedule items yet. Your classes will appear here.
             </li>
-            <!-- JS: populate with <li class="schedule-item"> entries -->
           </ul>
         </section>
 
         <!-- ---------- TASKS ---------- -->
         <section class="tasks-preview" id="tasks" aria-labelledby="tasksHeading">
-          <h2 id="tasksHeading" class="section-subtitle">Pending Tasks</h2>
+          <h2 id="tasksHeading" class="section-subtitle" data-i18n="dashboard.pendingTasks">Pending Tasks</h2>
 
           <ul class="task-list" id="taskList" aria-live="polite">
-            <li class="task-list__empty" id="taskEmptyState">
+            <li class="task-list__empty" id="taskEmptyState" data-i18n="tasks.empty">
               No tasks yet. Add a task to get started.
             </li>
-            <!-- JS: populate with <li class="task-item"> entries -->
           </ul>
 
           <button type="button" class="button button--primary" id="addTaskButton">
-            <span aria-hidden="true">＋</span> Add Task
+            <span aria-hidden="true">＋</span> <span data-i18n="tasks.add">Add Task</span>
           </button>
         </section>
 
         <!-- ---------- STUDY PROGRESS ---------- -->
         <section class="study-progress" id="study" aria-labelledby="studyHeading">
-          <h2 id="studyHeading" class="section-subtitle">Study Progress</h2>
+          <h2 id="studyHeading" class="section-subtitle" data-i18n="study.progress">Study Progress</h2>
 
           <ul class="progress-list" id="progressList" aria-live="polite">
-            <li class="progress-list__empty" id="progressEmptyState">
+            <li class="progress-list__empty" id="progressEmptyState" data-i18n="study.noProgress">
               Course progress will appear here once your courses are loaded.
             </li>
-            <!-- JS: populate with <li class="progress-item"> entries, e.g.
-              <li class="progress-item" data-course-id="">
-                <div class="progress-item__header">
-                  <span class="progress-item__name"></span>
-                  <span class="progress-item__percent"></span>
-                </div>
-                <progress class="progress-item__bar" max="100" value="0"></progress>
-              </li>
-            -->
           </ul>
 
-          <!-- ---------- STUDY PLANNER (feature 4) ---------- -->
+          <!-- ---------- STUDY PLANNER ---------- -->
           <section class="study-planner" id="studyPlanner" aria-labelledby="studyPlannerHeading">
-            <h3 id="studyPlannerHeading" class="section-subtitle">Study Planner</h3>
+            <h3 id="studyPlannerHeading" class="section-subtitle" data-i18n="study.planner">Study Planner</h3>
 
             <div class="study-planner__toolbar">
               <button type="button" class="button button--primary" id="addStudySessionButton">
-                <span aria-hidden="true">＋</span> Add Study Session
+                <span aria-hidden="true">＋</span> <span data-i18n="study.addSession">Add Study Session</span>
               </button>
 
               <div class="study-planner__views" role="group" aria-label="Planner view">
-                <button type="button" class="study-planner__view-toggle is-active" data-planner-view="daily" aria-pressed="true">Daily</button>
-                <button type="button" class="study-planner__view-toggle" data-planner-view="weekly" aria-pressed="false">Weekly</button>
+                <button type="button" class="study-planner__view-toggle is-active" data-planner-view="daily" aria-pressed="true" data-i18n="study.daily">Daily</button>
+                <button type="button" class="study-planner__view-toggle" data-planner-view="weekly" aria-pressed="false" data-i18n="study.weekly">Weekly</button>
               </div>
             </div>
 
             <ul class="study-plan-list" id="studyPlanList" aria-live="polite">
-              <li class="study-plan-list__empty" id="studyPlanEmptyState">No study sessions planned yet.</li>
-              <!-- JS: populate with <li class="study-session" data-session-id="">
-                course, date, start time, duration, goal, completion status
-              -->
+              <li class="study-plan-list__empty" id="studyPlanEmptyState" data-i18n="study.noSessions">No study sessions planned yet.</li>
             </ul>
           </section>
         </section>
       </section>
 
-      <!-- ---------- COURSES (feature 1: Course Manager) ---------- -->
-      <section class="courses" id="courses" aria-labelledby="coursesHeading" hidden>
-        <h1 id="coursesHeading" class="section-title">Courses</h1>
+      <!-- ---------- COURSES ---------- -->
+      <section class="courses" id="courses" data-layer="content" data-target="courses" aria-labelledby="coursesHeading" hidden>
+        <h1 id="coursesHeading" class="section-title" data-i18n="nav.courses">Courses</h1>
 
         <div class="courses__toolbar">
           <label for="coursesFilterInput" class="visually-hidden">Filter courses</label>
-          <input type="search" id="coursesFilterInput" class="courses__filter" placeholder="Filter courses…">
+          <input type="search" id="coursesFilterInput" class="courses__filter" placeholder="Filter courses…" data-i18n-placeholder="courses.filterPlaceholder">
           <button type="button" class="button button--primary" id="addCourseButton">
-            <span aria-hidden="true">＋</span> Add Course
+            <span aria-hidden="true">＋</span> <span data-i18n="courses.add">Add Course</span>
           </button>
         </div>
 
         <ul class="course-list" id="courseList" aria-live="polite">
-          <li class="course-list__empty" id="courseListEmptyState">No courses loaded yet.</li>
-          <!-- JS: populate with <li class="course-card" data-course-id="">
-            course name, code, instructor, credit hours, status, progress
-          -->
+          <li class="course-list__empty" id="courseListEmptyState" data-i18n="courses.empty">No courses loaded yet.</li>
         </ul>
 
         <article class="course-detail" id="courseDetail" aria-labelledby="courseDetailHeading" hidden>
@@ -294,99 +261,90 @@
 
           <dl class="course-detail__meta">
             <div class="course-detail__meta-item">
-              <dt>Course code</dt>
+              <dt data-i18n="courses.code">Course code</dt>
               <dd id="courseDetailCode">--</dd>
             </div>
             <div class="course-detail__meta-item">
-              <dt>Instructor</dt>
+              <dt data-i18n="courses.instructor">Instructor</dt>
               <dd id="courseDetailInstructor">--</dd>
             </div>
             <div class="course-detail__meta-item">
-              <dt>Credit hours</dt>
+              <dt data-i18n="courses.creditHours">Credit hours</dt>
               <dd id="courseDetailCredits">--</dd>
             </div>
             <div class="course-detail__meta-item">
-              <dt>Status</dt>
+              <dt data-i18n="courses.status">Status</dt>
               <dd id="courseDetailStatus">--</dd>
             </div>
           </dl>
 
           <div class="course-detail__progress">
-            <span class="course-detail__progress-label" id="courseDetailProgressLabel">Progress</span>
+            <span class="course-detail__progress-label" id="courseDetailProgressLabel" data-i18n="courses.progress">Progress</span>
             <progress id="courseDetailProgressBar" max="100" value="0" aria-labelledby="courseDetailProgressLabel"></progress>
             <span id="courseDetailProgressValue">0%</span>
           </div>
 
-          <nav class="course-detail__tabs" aria-label="Course detail sections">
+          <nav class="course-detail__tabs" aria-label="Course detail sections" data-layer="subsection" data-parent="courses">
             <ul>
-              <li><button type="button" class="course-detail__tab is-active" data-course-tab="resources" aria-controls="courseResources" aria-selected="true">Resources</button></li>
-              <li><button type="button" class="course-detail__tab" data-course-tab="notes" aria-controls="courseNotes" aria-selected="false">Notes</button></li>
-              <li><button type="button" class="course-detail__tab" data-course-tab="assignments" aria-controls="courseAssignments" aria-selected="false">Assignments</button></li>
-              <li><button type="button" class="course-detail__tab" data-course-tab="schedule" aria-controls="courseSchedule" aria-selected="false">Schedule</button></li>
-              <li><button type="button" class="course-detail__tab" data-course-tab="grades" aria-controls="courseGrades" aria-selected="false">Grades</button></li>
+              <li><button type="button" class="course-detail__tab is-active" data-course-tab="resources" data-target="courseResources" aria-controls="courseResources" aria-selected="true" data-sound="click" data-i18n="courses.resources">Resources</button></li>
+              <li><button type="button" class="course-detail__tab" data-course-tab="notes" data-target="courseNotes" aria-controls="courseNotes" aria-selected="false" data-sound="click" data-i18n="nav.notes">Notes</button></li>
+              <li><button type="button" class="course-detail__tab" data-course-tab="assignments" data-target="courseAssignments" aria-controls="courseAssignments" aria-selected="false" data-sound="click" data-i18n="courses.assignments">Assignments</button></li>
+              <li><button type="button" class="course-detail__tab" data-course-tab="schedule" data-target="courseSchedule" aria-controls="courseSchedule" aria-selected="false" data-sound="click" data-i18n="nav.schedule">Schedule</button></li>
+              <li><button type="button" class="course-detail__tab" data-course-tab="grades" data-target="courseGrades" aria-controls="courseGrades" aria-selected="false" data-sound="click" data-i18n="nav.grades">Grades</button></li>
             </ul>
           </nav>
 
-          <div class="course-detail__panel" id="courseResources" role="tabpanel">
+          <div class="course-detail__panel" id="courseResources" role="tabpanel" data-layer="subsection" data-parent="courses">
             <h3 class="visually-hidden">Course resources</h3>
             <ul id="courseResourcesList">
-              <li class="empty-state">No resources added yet.</li>
+              <li class="empty-state" data-i18n="courses.noResources">No resources added yet.</li>
             </ul>
           </div>
-          <div class="course-detail__panel" id="courseNotes" role="tabpanel" hidden>
+          <div class="course-detail__panel" id="courseNotes" role="tabpanel" data-layer="subsection" data-parent="courses" hidden>
             <h3 class="visually-hidden">Course notes</h3>
             <ul id="courseNotesList">
-              <li class="empty-state">No notes for this course yet.</li>
+              <li class="empty-state" data-i18n="courses.noNotes">No notes for this course yet.</li>
             </ul>
           </div>
-          <div class="course-detail__panel" id="courseAssignments" role="tabpanel" hidden>
+          <div class="course-detail__panel" id="courseAssignments" role="tabpanel" data-layer="subsection" data-parent="courses" hidden>
             <h3 class="visually-hidden">Course assignments</h3>
             <ul id="courseAssignmentsList">
-              <li class="empty-state">No assignments yet.</li>
+              <li class="empty-state" data-i18n="courses.noAssignments">No assignments yet.</li>
             </ul>
           </div>
-          <div class="course-detail__panel" id="courseSchedule" role="tabpanel" hidden>
+          <div class="course-detail__panel" id="courseSchedule" role="tabpanel" data-layer="subsection" data-parent="courses" hidden>
             <h3 class="visually-hidden">Course schedule</h3>
             <ul id="courseScheduleList">
-              <li class="empty-state">No schedule entries yet.</li>
+              <li class="empty-state" data-i18n="courses.noScheduleEntries">No schedule entries yet.</li>
             </ul>
           </div>
-          <div class="course-detail__panel" id="courseGrades" role="tabpanel" hidden>
+          <div class="course-detail__panel" id="courseGrades" role="tabpanel" data-layer="subsection" data-parent="courses" hidden>
             <h3 class="visually-hidden">Course grades</h3>
             <ul id="courseGradesList">
-              <li class="empty-state">No grades recorded yet.</li>
+              <li class="empty-state" data-i18n="grades.empty">No grades recorded yet.</li>
             </ul>
           </div>
         </article>
       </section>
 
-      <!-- ---------- NOTES (feature 2) ---------- -->
-      <section class="notes" id="notes" aria-labelledby="notesHeading" hidden>
-        <h1 id="notesHeading" class="section-title">Notes</h1>
+      <!-- ---------- NOTES ---------- -->
+      <section class="notes" id="notes" data-layer="content" data-target="notes" aria-labelledby="notesHeading" hidden>
+        <h1 id="notesHeading" class="section-title" data-i18n="nav.notes">Notes</h1>
 
         <div class="notes__toolbar">
           <label for="notesFilterInput" class="visually-hidden">Search notes</label>
-          <input type="search" id="notesFilterInput" class="notes__filter" placeholder="Search notes…">
-
+          <input type="search" id="notesFilterInput" class="notes__filter" placeholder="Search notes…" data-i18n-placeholder="notes.searchPlaceholder">
           <label for="notesCourseFilter" class="visually-hidden">Filter notes by course</label>
           <select id="notesCourseFilter" class="notes__course-filter">
-            <option value="">All courses</option>
+            <option value="" data-i18n="notes.allCourses">All courses</option>
           </select>
-
           <button type="button" class="button button--primary" id="addNoteButton">
-            <span aria-hidden="true">＋</span> Add Note
+            <span aria-hidden="true">＋</span> <span data-i18n="notes.add">Add Note</span>
           </button>
         </div>
 
         <ul class="notes-list" id="notesList" aria-live="polite">
-          <li class="notes-list__empty" id="notesEmptyState">No notes yet.</li>
-          <!-- JS: populate with <li class="note-card" data-note-id="">
-            <h3 class="note-card__title"></h3>
-            <p class="note-card__course"></p>
-            <p class="note-card__date"></p>
-            <ul class="note-card__tags"></ul>
-            <p class="note-card__preview"></p>
-          -->
+          <li class="notes-list__empty" id="notesEmptyState" data-i18n="notes.empty">No notes yet.</li>
         </ul>
 
         <article class="note-detail" id="noteDetail" aria-labelledby="noteDetailTitle" hidden>
@@ -397,21 +355,21 @@
           <ul class="note-detail__tags" id="noteDetailTags"></ul>
           <div class="note-detail__body" id="noteDetailBody"></div>
           <div class="note-detail__actions">
-            <button type="button" class="button" id="editNoteButton">Edit</button>
-            <button type="button" class="button button--danger" id="deleteNoteButton">Delete</button>
+            <button type="button" class="button" id="editNoteButton" data-i18n="common.edit">Edit</button>
+            <button type="button" class="button button--danger" id="deleteNoteButton" data-i18n="common.delete">Delete</button>
           </div>
         </article>
       </section>
 
-      <!-- ---------- ACADEMIC CALENDAR (feature 3) ---------- -->
-      <section class="calendar" id="calendar" aria-labelledby="calendarHeading" hidden>
-        <h1 id="calendarHeading" class="section-title">Academic Calendar</h1>
+      <!-- ---------- ACADEMIC CALENDAR ---------- -->
+      <section class="calendar" id="calendar" data-layer="content" data-target="calendar" aria-labelledby="calendarHeading" hidden>
+        <h1 id="calendarHeading" class="section-title" data-i18n="calendar.title">Academic Calendar</h1>
 
         <div class="calendar__toolbar">
           <button type="button" class="icon-button" id="calendarPrevButton" aria-label="Previous period">
             <span aria-hidden="true">‹</span>
           </button>
-          <button type="button" class="button" id="calendarTodayButton">Today</button>
+          <button type="button" class="button" id="calendarTodayButton" data-i18n="calendar.today">Today</button>
           <button type="button" class="icon-button" id="calendarNextButton" aria-label="Next period">
             <span aria-hidden="true">›</span>
           </button>
@@ -423,136 +381,125 @@
         </div>
 
         <section class="calendar__events" aria-labelledby="calendarEventsHeading">
-          <h2 id="calendarEventsHeading" class="section-subtitle">Upcoming Events</h2>
+          <h2 id="calendarEventsHeading" class="section-subtitle" data-i18n="calendar.upcomingEvents">Upcoming Events</h2>
           <ul class="calendar-event-list" id="calendarEvents" aria-live="polite">
-            <li class="calendar-event-list__empty" id="calendarEventsEmptyState">No upcoming events.</li>
-            <!-- JS: populate with <li class="calendar-event" data-event-id="">
-              lectures, assignments, midterms, finals, deadlines
-            -->
+            <li class="calendar-event-list__empty" id="calendarEventsEmptyState" data-i18n="calendar.noEvents">No upcoming events.</li>
           </ul>
         </section>
 
         <article class="calendar-event-detail" id="calendarEventDetail" aria-labelledby="calendarEventDetailTitle" hidden>
           <h2 id="calendarEventDetailTitle">Event title</h2>
           <dl>
-            <div><dt>Type</dt><dd id="calendarEventType">--</dd></div>
-            <div><dt>Date</dt><dd id="calendarEventDate">--</dd></div>
-            <div><dt>Course</dt><dd id="calendarEventCourse">--</dd></div>
+            <div><dt data-i18n="calendar.type">Type</dt><dd id="calendarEventType">--</dd></div>
+            <div><dt data-i18n="calendar.date">Date</dt><dd id="calendarEventDate">--</dd></div>
+            <div><dt data-i18n="courses.singular">Course</dt><dd id="calendarEventCourse">--</dd></div>
           </dl>
           <p id="calendarEventNotes"></p>
         </article>
       </section>
 
-      <!-- ---------- GRADES / GPA CALCULATOR (feature 5) ---------- -->
-      <section class="grades" id="grades" aria-labelledby="gradesHeading" hidden>
-        <h1 id="gradesHeading" class="section-title">Grades</h1>
+      <!-- ---------- GRADES / GPA ---------- -->
+      <section class="grades" id="grades" data-layer="content" data-target="grades" aria-labelledby="gradesHeading" hidden>
+        <h1 id="gradesHeading" class="section-title" data-i18n="nav.grades">Grades</h1>
 
         <div id="gradesContent" aria-live="polite">
-          <section class="gpa-summary" aria-labelledby="gpaSummaryHeading">
-            <h2 id="gpaSummaryHeading" class="section-subtitle">GPA Summary</h2>
+          <section class="gpa-summary" id="gpaSummarySection" aria-labelledby="gpaSummaryHeading">
+            <h2 id="gpaSummaryHeading" class="section-subtitle" data-i18n="grades.summary">GPA Summary</h2>
             <div class="gpa-summary__cards">
               <article class="stat-card" id="gpaSemesterCard">
-                <p class="stat-card__label">Semester GPA</p>
+                <p class="stat-card__label" data-i18n="grades.semesterGpa">Semester GPA</p>
                 <p class="stat-card__value" id="gpaSemesterValue">--</p>
               </article>
               <article class="stat-card" id="gpaCumulativeCard">
-                <p class="stat-card__label">Cumulative GPA</p>
+                <p class="stat-card__label" data-i18n="grades.cumulativeGpa">Cumulative GPA</p>
                 <p class="stat-card__value" id="gpaCumulativeValue">--</p>
               </article>
               <article class="stat-card" id="gpaTargetCard">
-                <p class="stat-card__label">Target GPA</p>
+                <p class="stat-card__label" data-i18n="grades.targetGpa">Target GPA</p>
                 <p class="stat-card__value" id="gpaTargetValue">--</p>
               </article>
               <article class="stat-card" id="gpaProjectionCard">
-                <p class="stat-card__label">Projected GPA</p>
+                <p class="stat-card__label" data-i18n="grades.projectedGpa">Projected GPA</p>
                 <p class="stat-card__value" id="gpaProjectionValue">--</p>
               </article>
             </div>
           </section>
 
-          <section class="gpa-table-section" aria-labelledby="gpaTableHeading">
-            <h2 id="gpaTableHeading" class="section-subtitle">Course Grades</h2>
+          <section class="gpa-table-section" id="gpaTableSection" aria-labelledby="gpaTableHeading">
+            <h2 id="gpaTableHeading" class="section-subtitle" data-i18n="grades.courseGrades">Course Grades</h2>
 
             <table class="gpa-table" id="gpaTable">
               <caption class="visually-hidden">Course grades and grade points used for GPA calculation</caption>
               <thead>
                 <tr>
-                  <th scope="col">Course</th>
-                  <th scope="col">Credit Hours</th>
-                  <th scope="col">Grade</th>
-                  <th scope="col">Grade Points</th>
+                  <th scope="col" data-i18n="courses.singular">Course</th>
+                  <th scope="col" data-i18n="courses.creditHoursShort">Credit Hours</th>
+                  <th scope="col" data-i18n="grades.grade">Grade</th>
+                  <th scope="col" data-i18n="grades.gradePoints">Grade Points</th>
                 </tr>
               </thead>
               <tbody id="gpaTableBody">
                 <tr class="gpa-table__empty-row">
-                  <td colspan="4">No grades recorded yet.</td>
+                  <td colspan="4" data-i18n="grades.empty">No grades recorded yet.</td>
                 </tr>
               </tbody>
             </table>
 
             <form class="gpa-target-form" id="gpaTargetForm">
-              <label for="gpaTargetInput">Target GPA</label>
+              <label for="gpaTargetInput" data-i18n="grades.targetGpa">Target GPA</label>
               <input type="number" id="gpaTargetInput" name="targetGpa" min="0" max="4" step="0.01" inputmode="decimal">
-              <button type="submit" class="button button--primary">Set Target</button>
+              <button type="submit" class="button button--primary" data-i18n="grades.setTarget">Set Target</button>
             </form>
           </section>
         </div>
       </section>
 
-      <!-- ---------- ACADEMIC ANALYTICS (feature 7) ---------- -->
-      <section class="analytics" id="analytics" aria-labelledby="analyticsHeading" hidden>
-        <h1 id="analyticsHeading" class="section-title">Academic Analytics</h1>
+      <!-- ---------- ACADEMIC ANALYTICS ---------- -->
+      <section class="analytics" id="analytics" data-layer="content" data-target="analytics" aria-labelledby="analyticsHeading" hidden>
+        <h1 id="analyticsHeading" class="section-title" data-i18n="nav.analytics">Academic Analytics</h1>
 
         <div class="analytics__grid" id="analyticsContainer" aria-live="polite">
           <article class="analytics-card" id="analyticsStudyProgress" aria-labelledby="analyticsStudyProgressHeading">
-            <h2 id="analyticsStudyProgressHeading" class="section-subtitle">Study Progress</h2>
-            <div class="analytics-card__body"><p class="empty-state">No data yet.</p></div>
+            <h2 id="analyticsStudyProgressHeading" class="section-subtitle" data-i18n="study.progress">Study Progress</h2>
+            <div class="analytics-card__body"><p class="empty-state" data-i18n="common.noDataYet">No data yet.</p></div>
           </article>
-
           <article class="analytics-card" id="analyticsCourseProgress" aria-labelledby="analyticsCourseProgressHeading">
-            <h2 id="analyticsCourseProgressHeading" class="section-subtitle">Course Progress</h2>
-            <div class="analytics-card__body"><p class="empty-state">No data yet.</p></div>
+            <h2 id="analyticsCourseProgressHeading" class="section-subtitle" data-i18n="analytics.courseProgress">Course Progress</h2>
+            <div class="analytics-card__body"><p class="empty-state" data-i18n="common.noDataYet">No data yet.</p></div>
           </article>
-
           <article class="analytics-card" id="analyticsTaskCompletion" aria-labelledby="analyticsTaskCompletionHeading">
-            <h2 id="analyticsTaskCompletionHeading" class="section-subtitle">Task Completion</h2>
-            <div class="analytics-card__body"><p class="empty-state">No data yet.</p></div>
+            <h2 id="analyticsTaskCompletionHeading" class="section-subtitle" data-i18n="analytics.taskCompletion">Task Completion</h2>
+            <div class="analytics-card__body"><p class="empty-state" data-i18n="common.noDataYet">No data yet.</p></div>
           </article>
-
           <article class="analytics-card" id="analyticsStudyTime" aria-labelledby="analyticsStudyTimeHeading">
-            <h2 id="analyticsStudyTimeHeading" class="section-subtitle">Study Time</h2>
-            <div class="analytics-card__body"><p class="empty-state">No data yet.</p></div>
+            <h2 id="analyticsStudyTimeHeading" class="section-subtitle" data-i18n="analytics.studyTime">Study Time</h2>
+            <div class="analytics-card__body"><p class="empty-state" data-i18n="common.noDataYet">No data yet.</p></div>
           </article>
-
           <article class="analytics-card" id="analyticsGpaTrend" aria-labelledby="analyticsGpaTrendHeading">
-            <h2 id="analyticsGpaTrendHeading" class="section-subtitle">GPA Trend</h2>
-            <div class="analytics-card__body"><p class="empty-state">No data yet.</p></div>
+            <h2 id="analyticsGpaTrendHeading" class="section-subtitle" data-i18n="analytics.gpaTrend">GPA Trend</h2>
+            <div class="analytics-card__body"><p class="empty-state" data-i18n="common.noDataYet">No data yet.</p></div>
           </article>
-
           <article class="analytics-card" id="analyticsUpcomingWorkload" aria-labelledby="analyticsUpcomingWorkloadHeading">
-            <h2 id="analyticsUpcomingWorkloadHeading" class="section-subtitle">Upcoming Workload</h2>
-            <div class="analytics-card__body"><p class="empty-state">No data yet.</p></div>
+            <h2 id="analyticsUpcomingWorkloadHeading" class="section-subtitle" data-i18n="analytics.upcomingWorkload">Upcoming Workload</h2>
+            <div class="analytics-card__body"><p class="empty-state" data-i18n="common.noDataYet">No data yet.</p></div>
           </article>
         </div>
       </section>
 
-      <!-- ---------- STUDY TOOLS: QUIZZES / FLASHCARDS (feature 8) ---------- -->
-      <section class="study-tools" id="studyTools" aria-labelledby="studyToolsHeading" hidden>
-        <h1 id="studyToolsHeading" class="section-title">Study Tools</h1>
+      <!-- ---------- STUDY TOOLS ---------- -->
+      <section class="study-tools" id="studyTools" data-layer="content" data-target="studyTools" aria-labelledby="studyToolsHeading" hidden>
+        <h1 id="studyToolsHeading" class="section-title" data-i18n="nav.studyTools">Study Tools</h1>
 
-        <nav class="study-tools__tabs" aria-label="Study tools sections">
+        <nav class="study-tools__tabs" aria-label="Study tools sections" data-layer="subsection" data-parent="studyTools">
           <ul>
-            <li><button type="button" class="study-tools__tab is-active" data-tools-tab="flashcards" aria-controls="flashcardsPanel" aria-selected="true">Flashcards</button></li>
-            <li><button type="button" class="study-tools__tab" data-tools-tab="quizzes" aria-controls="quizzesPanel" aria-selected="false">Quizzes</button></li>
+            <li><button type="button" class="study-tools__tab is-active" data-tools-tab="flashcards" data-target="flashcardsPanel" aria-controls="flashcardsPanel" aria-selected="true" data-sound="click" data-i18n="study.flashcards">Flashcards</button></li>
+            <li><button type="button" class="study-tools__tab" data-tools-tab="quizzes" data-target="quizzesPanel" aria-controls="quizzesPanel" aria-selected="false" data-sound="click" data-i18n="study.quizzes">Quizzes</button></li>
           </ul>
         </nav>
 
-        <div class="study-tools__panel" id="flashcardsPanel" role="tabpanel">
+        <div class="study-tools__panel" id="flashcardsPanel" role="tabpanel" data-layer="subsection" data-parent="studyTools">
           <div class="flashcard-decks" id="flashcardDecks" aria-live="polite">
-            <p class="empty-state">No flashcard decks yet.</p>
-            <!-- JS: populate with <article class="flashcard-deck" data-deck-id="">
-              deck title, card count
-            -->
+            <p class="empty-state" data-i18n="study.noDecks">No flashcard decks yet.</p>
           </div>
 
           <div class="flashcard-container" id="flashcardContainer" hidden>
@@ -561,19 +508,16 @@
               <div class="flashcard__back" id="flashcardBack" hidden>Answer</div>
             </div>
             <div class="flashcard-controls">
-              <button type="button" class="button" id="flashcardPrevButton">Previous</button>
+              <button type="button" class="button" id="flashcardPrevButton" data-i18n="common.previous">Previous</button>
               <p class="flashcard-progress" id="flashcardProgress" aria-live="polite">0 / 0</p>
-              <button type="button" class="button" id="flashcardNextButton">Next</button>
+              <button type="button" class="button" id="flashcardNextButton" data-i18n="common.next">Next</button>
             </div>
           </div>
         </div>
 
-        <div class="study-tools__panel" id="quizzesPanel" role="tabpanel" hidden>
+        <div class="study-tools__panel" id="quizzesPanel" role="tabpanel" data-layer="subsection" data-parent="studyTools" hidden>
           <ul class="quiz-list" id="quizList" aria-live="polite">
-            <li class="empty-state">No quizzes yet.</li>
-            <!-- JS: populate with <li class="quiz-card" data-quiz-id="">
-              quiz title
-            -->
+            <li class="empty-state" data-i18n="study.noQuizzes">No quizzes yet.</li>
           </ul>
 
           <div class="quiz-container" id="quizContainer" hidden>
@@ -584,12 +528,11 @@
               <p id="quizQuestionText"></p>
               <fieldset id="quizOptions">
                 <legend class="visually-hidden">Answer options</legend>
-                <!-- JS: populate with radio/checkbox <label><input type="radio" name="quizAnswer"> option</label> -->
               </fieldset>
             </div>
 
             <div class="quiz-container__actions">
-              <button type="button" class="button button--primary" id="quizSubmitButton">Submit</button>
+              <button type="button" class="button button--primary" id="quizSubmitButton" data-i18n="common.submit">Submit</button>
             </div>
 
             <div class="quiz-results" id="quizResults" hidden aria-live="polite">
@@ -599,9 +542,9 @@
         </div>
       </section>
 
-      <!-- ---------- SETTINGS (placeholder section for future view) ---------- -->
-      <section class="settings" id="settings" aria-labelledby="settingsHeading" hidden>
-        <h1 id="settingsHeading" class="section-title">Settings</h1>
+      <!-- ---------- SETTINGS ---------- -->
+      <section class="settings" id="settings" data-layer="content" data-target="settings" aria-labelledby="settingsHeading" hidden>
+        <h1 id="settingsHeading" class="section-title" data-i18n="nav.settings">Settings</h1>
         <div id="settingsContent">
           <p class="empty-state">Settings options will appear here.</p>
         </div>
@@ -610,6 +553,6 @@
     </main>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
